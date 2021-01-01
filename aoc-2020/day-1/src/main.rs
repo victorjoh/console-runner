@@ -3,31 +3,51 @@ use reqwest::header;
 use std::env;
 use std::error::Error;
 use std::fs;
+use std::io;
 
 const INPUT_CACHE_FILE: &str = "2020-1-input.txt";
 const DAY_1_INPUT: &str = "https://adventofcode.com/2020/day/1/input";
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let args: Vec<_> = env::args().collect();
-    let session = args.get(1).expect("session is missing from the arguments");
+    let input = read_cached_input().or_else::<Box<dyn Error>, _>(|_| {
+        let session = get_session_id(env::args())?;
+        let input = download_input(session)?;
+        write_cached_input(&input)?;
+        Ok(input)
+    })?;
 
-    println!("looking for cached input at {}", INPUT_CACHE_FILE);
-    let input = fs::read_to_string(INPUT_CACHE_FILE).unwrap_or_else(|_| {
-        let input = download_input(session).unwrap();
-        fs::write(INPUT_CACHE_FILE, &input).unwrap();
-        input
-    });
     println!("Input = {}", input);
     Ok(())
 }
 
-fn download_input(aoc_web_session_id: &str) -> reqwest::Result<String> {
-    println!("downloading input from {} ...", DAY_1_INPUT);
+fn get_session_id(mut args: env::Args) -> Result<String, &'static str> {
+    args.next();
+    args.next().ok_or("session is missing from the arguments")
+}
+
+fn read_cached_input() -> io::Result<String> {
+    let res = fs::read_to_string(INPUT_CACHE_FILE);
+    if res.is_ok() {
+        println!("found input cache at {}", INPUT_CACHE_FILE);
+    } else {
+        println!("no cached input found at {}", INPUT_CACHE_FILE);
+    }
+    res
+}
+
+fn download_input(aoc_web_session_id: String) -> Result<String, Box<dyn Error>> {
+    println!("downloading input from {}...", DAY_1_INPUT);
     let input = blocking::Client::new()
         .get(DAY_1_INPUT)
         .header(header::COOKIE, format!("session={}", aoc_web_session_id))
         .send()?
-        .text();
+        .text()?;
     println!("finished downloading input");
-    input
+    Ok(input)
+}
+
+fn write_cached_input(contents: &str) -> io::Result<()> {
+    fs::write(INPUT_CACHE_FILE, contents)?;
+    println!("cached input to {}", INPUT_CACHE_FILE);
+    Ok(())
 }
