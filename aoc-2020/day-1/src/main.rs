@@ -16,7 +16,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         Ok(input)
     })?;
 
-    println!("Answer = {}", day1::solve_puzzle(input));
+    println!("Answer part 1= {}", day1::solve_part_1(&input));
+    println!("Answer part 2= {}", day1::solve_part_2(&input));
     Ok(())
 }
 
