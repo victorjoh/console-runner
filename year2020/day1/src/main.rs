@@ -5,7 +5,8 @@ use std::error::Error;
 use std::fs;
 use std::io;
 
-const INPUT_CACHE_FILE: &str = "2020-1-input.txt";
+const INPUT_CACHE_FILE: &str = "input/2020-1-input.txt";
+const INPUT_DIR: &str = "input";
 const DAY_1_INPUT: &str = "https://adventofcode.com/2020/day/1/input";
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -48,6 +49,7 @@ fn download_input(aoc_web_session_id: String) -> Result<String, reqwest::Error> 
 }
 
 fn write_cached_input(contents: &str) -> io::Result<()> {
+    fs::create_dir_all(INPUT_DIR).unwrap();
     fs::write(INPUT_CACHE_FILE, contents)?;
     println!("cached input to {}", INPUT_CACHE_FILE);
     Ok(())
