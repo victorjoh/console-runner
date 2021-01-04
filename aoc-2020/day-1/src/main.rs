@@ -16,8 +16,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         Ok(input)
     })?;
 
-    println!("Input = {}", input);
+    println!("Answer = {}", day1::solve_puzzle(input));
     Ok(())
+}
+
+fn read_cached_input() -> io::Result<String>  {
+    let res = fs::read_to_string(INPUT_CACHE_FILE);
+    if res.is_ok() {
+        println!("successfully read input cache at {}", INPUT_CACHE_FILE);
+    } else {
+        println!("failed to read input cache at {}", INPUT_CACHE_FILE);
+    }
+    res
 }
 
 fn get_session_id(mut args: env::Args) -> Result<String, &'static str> {
@@ -25,17 +35,7 @@ fn get_session_id(mut args: env::Args) -> Result<String, &'static str> {
     args.next().ok_or("session is missing from the arguments")
 }
 
-fn read_cached_input() -> io::Result<String> {
-    let res = fs::read_to_string(INPUT_CACHE_FILE);
-    if res.is_ok() {
-        println!("found input cache at {}", INPUT_CACHE_FILE);
-    } else {
-        println!("no cached input found at {}", INPUT_CACHE_FILE);
-    }
-    res
-}
-
-fn download_input(aoc_web_session_id: String) -> Result<String, Box<dyn Error>> {
+fn download_input(aoc_web_session_id: String) -> Result<String, reqwest::Error> {
     println!("downloading input from {}...", DAY_1_INPUT);
     let input = blocking::Client::new()
         .get(DAY_1_INPUT)
