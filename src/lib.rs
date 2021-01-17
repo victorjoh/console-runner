@@ -2,6 +2,119 @@ use std::{thread, time};
 use termion;
 use termion::{clear, color, cursor, style};
 
+type Solver = fn(input: &String) -> String;
+
+struct Problem {
+    year: u16,
+    day: u8,
+    solve_part_1: Solver,
+    solve_part_2: Solver,
+}
+
+impl Problem {
+    fn solve(&self, log: fn(String)) -> (Answer, Answer) {
+        let lines = [
+            "Starting",
+            "on going",
+            "what are we doing to ourselves?",
+            "work work",
+            "working hard or hardly working?",
+            "are we there yet",
+            "yeti",
+            "something is happening",
+            // "this is a very long line that should require wrapping. I am sure that it will since I am adding a lot of text to it. Now I am really making sure",
+            "where were you?",
+            "done",
+        ];
+        for line in &lines {
+            log(String::from(*line));
+            thread::sleep(time::Duration::from_millis(500));
+        }
+        (String::from("5"), String::from("1235"))
+    }
+
+    fn getName(&self) -> String {
+        format!("year {} day {}", self.year, self.day)
+    }
+}
+
+fn do_nothing(input: &String) -> String {
+    String::from("123")
+}
+
+type Message = String;
+type Answer = String;
+
+struct Job {
+    problem: Problem,
+    state: State,
+}
+
+enum State {
+    Ignored,
+    Pending,
+    Running(Vec<Message>),
+    Solved(Answer, Answer),
+    Failed(Vec<Message>),
+}
+
+impl Job {
+    fn start_working(&mut self) {
+        self.state = State::Running(Vec::new());
+    }
+
+    fn get_running_log(&self) -> &Vec<Message> {
+        return match &self.state {
+            State::Running(log) => log,
+            _ => panic!("start_working has to be called before finish"),
+        };
+    }
+
+    fn finish(&self, notifyProgress: fn()) {
+        let log = self.get_running_log();
+        let answers = self.problem.solve(|message| {
+            // log.push(message);
+            // notifyProgress();
+        });
+    }
+}
+
+struct Worker {
+    jobs: Vec<Job>,
+    ui: UserInterface,
+}
+
+fn is_not_ignored(job: &&mut Job) -> bool {
+    match job.state {
+        State::Ignored => false,
+        _ => true,
+    }
+}
+
+impl Worker {
+    fn finishJobs(&mut self) {
+        for job in self.jobs.iter_mut().filter(is_not_ignored) {
+            job.start_working();
+            self.ui.update(job);
+            job.finish(||());
+            self.ui.update(job);
+        }
+    }
+}
+
+trait UserInterface {
+    fn update(&self, job: &Job);
+}
+
+fn solve_something() {
+    let p1 = Problem {
+        year: 2020,
+        day: 1,
+        solve_part_1: do_nothing,
+        solve_part_2: do_nothing,
+    };
+}
+
 mod year2020 {
     pub mod day1 {
         use std::{thread, time};
