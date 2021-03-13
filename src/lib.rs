@@ -1,8 +1,9 @@
 use std::{thread, time};
 use termion;
 use termion::{clear, color, cursor, style};
+mod tasks;
 
-type Solver = fn(input: &String) -> String;
+/*type Solver = fn(input: &String) -> String;
 
 struct Problem {
     year: u16,
@@ -71,7 +72,15 @@ impl Job {
     }
 
     fn finish(&self, notifyProgress: fn()) {
-        let log = self.get_running_log();
+        let v = match self.state {
+            State::Running(log) => log,
+            _ => panic!("start_working has to be called before finish"),
+        };
+
+        let not = |message: String| {
+            v.push(message);
+            notifyProgress();
+        };
         let answers = self.problem.solve(|message| {
             // log.push(message);
             // notifyProgress();
@@ -126,7 +135,21 @@ mod year2020 {
             println!("\tFinished!");
         }
     }
+}*/
+
+
+/*enum State {
+    Ignored,
+    Pending,
+    Running(Vec<Message>),
+    Solved(Answer, Answer),
+    Failed(Vec<Message>),
 }
+
+pub trait Job {
+    fn name(&self) -> String;
+    fn
+}*/
 
 fn run_something() {
     let lines = [
@@ -173,8 +196,27 @@ fn run_something() {
     println!("  Part 2:{} {}{}", style::Italic, 1235, style::Reset);
 }
 
+use std::time::Duration;
+
+struct Problem {
+    vals: Vec<String>
+}
+
+impl tasks::Task for Problem {
+    fn perform(&self, logger: &dyn tasks::Logger) {
+        for val in &self.vals {
+            logger.log(val.to_string());
+            thread::sleep(Duration::from_secs(1));
+        }
+    }
+}
+
 pub fn run(day: Option<usize>, session: Option<String>) {
-    run_something()
+    //run_something()
+
+    tasks::perform(Vec::new());
+
+
     // println!(
     //     "{}{}Solving{} 2020 day 1",
     //     color::Fg(color::Green),
