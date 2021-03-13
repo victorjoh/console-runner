@@ -137,7 +137,6 @@ mod year2020 {
     }
 }*/
 
-
 /*enum State {
     Ignored,
     Pending,
@@ -199,7 +198,7 @@ fn run_something() {
 use std::time::Duration;
 
 struct Problem {
-    vals: Vec<String>
+    vals: Vec<String>,
 }
 
 impl tasks::Task for Problem {
@@ -211,11 +210,35 @@ impl tasks::Task for Problem {
     }
 }
 
+struct Console {}
+
+impl tasks::Logger for Console {
+    fn log(&self, message: String) {
+        println!("Got: {}", message);
+    }
+}
+
 pub fn run(day: Option<usize>, session: Option<String>) {
     //run_something()
 
-    tasks::perform(Vec::new());
+    let p1 = Problem {
+        vals: vec![
+            String::from("hi"),
+            String::from("from"),
+            String::from("the"),
+            String::from("thread"),
+        ],
+    };
+    let p2 = Problem {
+        vals: vec![
+            String::from("more"),
+            String::from("messages"),
+            String::from("for"),
+            String::from("you"),
+        ],
+    };
 
+    tasks::perform(vec![Box::from(p1), Box::from(p2)], &Console {});
 
     // println!(
     //     "{}{}Solving{} 2020 day 1",
