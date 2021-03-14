@@ -1,22 +1,7 @@
+use crate::common::*;
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::thread;
-
-pub trait Task<M>: Send {
-    fn perform(&self, logger: &dyn Logger<M>);
-    fn name(&self) -> TaskName;
-}
-
-pub trait Logger<M> {
-    fn log(&self, message: M);
-}
-
-pub type TaskName = String;
-
-pub trait View<M> {
-    fn initialize(&self, tasks: Vec<TaskName>);
-    fn show(&self, task_message: TaskMessage<M>);
-}
 
 struct ThreadLogger<M> {
     sender: Sender<TaskMessage<M>>,
@@ -33,11 +18,6 @@ impl<M> Logger<M> for ThreadLogger<M> {
     }
 }
 
-pub struct TaskMessage<M> {
-    pub message: M,
-    pub task_name: TaskName,
-}
-
 pub fn perform<M>(tasks: Vec<Box<dyn Task<M>>>, view: &dyn View<M>)
 where
     M: Send + 'static,
@@ -46,8 +26,8 @@ where
         return;
     }
 
-    let (first_sender, receiver) = mpsc::channel();
-    let senders = multiply_senders(first_sender, tasks.len());
+    let (a_sender, receiver) = mpsc::channel();
+    let senders = multiply_senders(a_sender, tasks.len());
 
     tasks
         .into_iter()
@@ -59,12 +39,12 @@ where
     }
 }
 
-fn multiply_senders<T>(original_sender: Sender<T>, amount: usize) -> Vec<Sender<T>> {
+fn multiply_senders<T>(a_sender: Sender<T>, amount: usize) -> Vec<Sender<T>> {
     let mut senders = Vec::new();
     for _ in 0..=amount - 2 {
-        senders.push(original_sender.clone());
+        senders.push(a_sender.clone());
     }
-    senders.push(original_sender);
+    senders.push(a_sender);
     return senders;
 }
 

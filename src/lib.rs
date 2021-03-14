@@ -1,7 +1,12 @@
 use std::{thread, time};
 use termion;
 use termion::{clear, color, cursor, style};
+mod common;
 mod tasks;
+mod view;
+
+use common::*;
+use view::*;
 
 /*type Solver = fn(input: &String) -> String;
 
@@ -199,31 +204,19 @@ use std::time::Duration;
 
 struct Problem {
     vals: Vec<String>,
-    name: tasks::TaskName
+    name: TaskName,
 }
 
-impl tasks::Task<String> for Problem {
-    fn perform(&self, logger: &dyn tasks::Logger<String>) {
+impl Task<String> for Problem {
+    fn perform(&self, logger: &dyn Logger<String>) {
         for val in &self.vals {
             logger.log(val.to_string());
             thread::sleep(Duration::from_secs(1));
         }
     }
 
-    fn name(&self) -> tasks::TaskName {
+    fn name(&self) -> TaskName {
         self.name.clone()
-    }
-}
-
-struct Console {}
-
-impl tasks::View<String> for Console {
-    fn initialize(&self, tasks: Vec<tasks::TaskName>) {
-
-    }
-
-    fn show(&self, task_message: tasks::TaskMessage<String>) {
-        println!("{}: {}", task_message.task_name, task_message.message);
     }
 }
 
@@ -237,7 +230,7 @@ pub fn run(day: Option<usize>, session: Option<String>) {
             String::from("the"),
             String::from("thread"),
         ],
-        name: String::from("p1")
+        name: String::from("p1"),
     };
     let p2 = Problem {
         vals: vec![
@@ -246,7 +239,7 @@ pub fn run(day: Option<usize>, session: Option<String>) {
             String::from("for"),
             String::from("you"),
         ],
-        name: String::from("p2")
+        name: String::from("p2"),
     };
 
     tasks::perform(vec![Box::from(p1), Box::from(p2)], &Console {});
