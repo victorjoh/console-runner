@@ -10,8 +10,8 @@ pub trait Logger<M> {
 pub type TaskName = String;
 
 pub trait View<M> {
-    fn initialize(&self, tasks: Vec<TaskName>);
-    fn show(&self, task_message: TaskMessage<M>);
+    fn initialize(&mut self, tasks: Vec<TaskName>);
+    fn show(&mut self, task_message: TaskMessage<M>);
 }
 
 pub struct TaskMessage<M> {

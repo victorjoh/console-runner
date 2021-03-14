@@ -18,13 +18,14 @@ impl<M> Logger<M> for ThreadLogger<M> {
     }
 }
 
-pub fn perform<M>(tasks: Vec<Box<dyn Task<M>>>, view: &dyn View<M>)
+pub fn perform<M>(tasks: Vec<Box<dyn Task<M>>>, view: &mut dyn View<M>)
 where
     M: Send + 'static,
 {
     if tasks.len() == 0 {
         return;
     }
+    view.initialize(tasks.iter().map(|task| task.name()).collect());
 
     let (a_sender, receiver) = mpsc::channel();
     let senders = multiply_senders(a_sender, tasks.len());
