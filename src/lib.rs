@@ -199,22 +199,31 @@ use std::time::Duration;
 
 struct Problem {
     vals: Vec<String>,
+    name: tasks::TaskName
 }
 
-impl tasks::Task for Problem {
-    fn perform(&self, logger: &dyn tasks::Logger) {
+impl tasks::Task<String> for Problem {
+    fn perform(&self, logger: &dyn tasks::Logger<String>) {
         for val in &self.vals {
             logger.log(val.to_string());
             thread::sleep(Duration::from_secs(1));
         }
     }
+
+    fn name(&self) -> tasks::TaskName {
+        self.name.clone()
+    }
 }
 
 struct Console {}
 
-impl tasks::Logger for Console {
-    fn log(&self, message: String) {
-        println!("Got: {}", message);
+impl tasks::View<String> for Console {
+    fn initialize(&self, tasks: Vec<tasks::TaskName>) {
+
+    }
+
+    fn show(&self, task_message: tasks::TaskMessage<String>) {
+        println!("{}: {}", task_message.task_name, task_message.message);
     }
 }
 
@@ -228,6 +237,7 @@ pub fn run(day: Option<usize>, session: Option<String>) {
             String::from("the"),
             String::from("thread"),
         ],
+        name: String::from("p1")
     };
     let p2 = Problem {
         vals: vec![
@@ -236,6 +246,7 @@ pub fn run(day: Option<usize>, session: Option<String>) {
             String::from("for"),
             String::from("you"),
         ],
+        name: String::from("p2")
     };
 
     tasks::perform(vec![Box::from(p1), Box::from(p2)], &Console {});

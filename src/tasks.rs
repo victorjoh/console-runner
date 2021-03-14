@@ -2,31 +2,46 @@ use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::thread;
 
-pub trait Task: Send {
-    fn perform(&self, logger: &dyn Logger);
+pub trait Task<M>: Send {
+    fn perform(&self, logger: &dyn Logger<M>);
+    fn name(&self) -> TaskName;
 }
 
-pub trait Logger {
-    fn log(&self, message: String);
+pub trait Logger<M> {
+    fn log(&self, message: M);
 }
 
-struct ThreadLogger {
-    sender: Sender<String>,
+pub type TaskName = String;
+
+pub trait View<M> {
+    fn initialize(&self, tasks: Vec<TaskName>);
+    fn show(&self, task_message: TaskMessage<M>);
 }
 
-impl ThreadLogger {
-    fn new(sender: Sender<String>) -> ThreadLogger {
-        ThreadLogger { sender }
+struct ThreadLogger<M> {
+    sender: Sender<TaskMessage<M>>,
+    task_name: TaskName,
+}
+
+impl<M> Logger<M> for ThreadLogger<M> {
+    fn log(&self, message: M) {
+        let task_message = TaskMessage {
+            message,
+            task_name: self.task_name.clone(),
+        };
+        self.sender.send(task_message).unwrap();
     }
 }
 
-impl Logger for ThreadLogger {
-    fn log(&self, message: String) {
-        self.sender.send(message).unwrap();
-    }
+pub struct TaskMessage<M> {
+    pub message: M,
+    pub task_name: TaskName,
 }
 
-pub fn perform(tasks: Vec<Box<dyn Task>>, logger: &dyn Logger) {
+pub fn perform<M>(tasks: Vec<Box<dyn Task<M>>>, view: &dyn View<M>)
+where
+    M: Send + 'static,
+{
     if tasks.len() == 0 {
         return;
     }
@@ -40,7 +55,7 @@ pub fn perform(tasks: Vec<Box<dyn Task>>, logger: &dyn Logger) {
         .for_each(|(task, sender)| spawn_thread(task, sender));
 
     for received in receiver {
-        logger.log(received);
+        view.show(received);
     }
 }
 
@@ -53,7 +68,13 @@ fn multiply_senders<T>(original_sender: Sender<T>, amount: usize) -> Vec<Sender<
     return senders;
 }
 
-fn spawn_thread(task: Box<dyn Task>, sender: Sender<String>) {
-    let logger = ThreadLogger::new(sender);
+fn spawn_thread<M>(task: Box<dyn Task<M>>, sender: Sender<TaskMessage<M>>)
+where
+    M: Send + 'static,
+{
+    let logger = ThreadLogger {
+        sender,
+        task_name: task.name(),
+    };
     thread::spawn(move || task.perform(&logger));
 }
