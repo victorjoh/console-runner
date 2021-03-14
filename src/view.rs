@@ -4,36 +4,60 @@ use termion;
 use termion::{clear, color, cursor, style};
 
 pub struct Console {
-    tasks: Vec<TaskName>,
+    logs: Vec<TaskLog>,
 }
 
-fn print_pending(task_name: &TaskName) {
-    println!(
-        "{}{}Pending{} {}",
-        color::Fg(color::Blue),
-        style::Bold,
-        style::Reset,
-        task_name
-    );
+struct TaskLog {
+    name: TaskName,
+    messages: Vec<String>,
+}
+
+impl TaskLog {
+    fn new(name: TaskName) -> TaskLog {
+        TaskLog {
+            name,
+            messages: Vec::new(),
+        }
+    }
+
+    fn print(&self) {
+        println!(
+            "{}{}Pending{} {}",
+            color::Fg(color::Blue),
+            style::Bold,
+            style::Reset,
+            self.name
+        );
+        for message in &self.messages {
+            println!("  {}", message);
+        }
+    }
 }
 
 impl Console {
     pub fn new() -> Console {
-        Console { tasks: Vec::new() }
+        Console { logs: Vec::new() }
     }
 }
 
 impl View<String> for Console {
     fn initialize(&mut self, tasks: Vec<TaskName>) {
-        self.tasks = tasks;
-        self.tasks
-            .iter()
-            .for_each(|task_name| print_pending(task_name));
+        self.logs = tasks
+            .into_iter()
+            .map(|task_name| TaskLog::new(task_name))
+            .collect();
+        self.logs.iter().for_each(|log| log.print());
     }
 
     fn show(&mut self, task_message: TaskMessage<String>) {
-        println!("{}: {}", task_message.task_name, task_message.message);
+        let log = self.logs.iter_mut().find(|log| log.name == task_message.task_name).unwrap();
+        &mut log.messages.push(task_message.message);
+        self.logs.iter().for_each(|log| log.print());
     }
+}
+
+fn add_stuff(mess: &mut Vec<String>) {
+    mess.push(String::from("A"));
 }
 
 fn example() {
