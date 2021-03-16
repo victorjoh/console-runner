@@ -33,6 +33,10 @@ pub fn run(day: Option<usize>, session: Option<String>) {
             String::from("from"),
             String::from("the"),
             String::from("thread"),
+            String::from("goodbye"),
+            String::from("to"),
+            String::from("all"),
+            String::from("needles"),
         ],
         name: String::from("p1"),
     };
@@ -42,13 +46,13 @@ pub fn run(day: Option<usize>, session: Option<String>) {
             String::from("messages"),
             String::from("for"),
             String::from("you"),
+            String::from("less"),
+            String::from("speaking"),
+            String::from("with"),
+            String::from("me"),
         ],
         name: String::from("p2"),
     };
 
     tasks::perform(vec![Box::from(p1), Box::from(p2)], &mut Console::new());
-}
-
-fn ceiling(dividend: usize, divisor: usize) -> usize {
-    (dividend + divisor - 1) / divisor
 }
