@@ -1,4 +1,5 @@
 use crate::common::*;
+use std::convert::TryFrom;
 use std::{thread, time};
 use termion;
 use termion::{clear, color, cursor, style};
@@ -32,6 +33,10 @@ impl TaskLog {
             println!("  {}", message);
         }
     }
+
+    fn nbr_of_lines(&self) -> usize {
+        1 + self.messages.len()
+    }
 }
 
 impl Console {
@@ -46,18 +51,36 @@ impl View<String> for Console {
             .into_iter()
             .map(|task_name| TaskLog::new(task_name))
             .collect();
-        self.logs.iter().for_each(|log| log.print());
+        print_all_logs(&self.logs);
     }
 
     fn show(&mut self, task_message: TaskMessage<String>) {
-        let log = self.logs.iter_mut().find(|log| log.name == task_message.task_name).unwrap();
-        &mut log.messages.push(task_message.message);
-        self.logs.iter().for_each(|log| log.print());
+        let log = self
+            .logs
+            .iter_mut()
+            .find(|log| log.name == task_message.task_name)
+            .unwrap();
+        log.messages.push(task_message.message);
+
+        clear_lines(get_nbr_of_lines(&self.logs) - 1);
+        print_all_logs(&self.logs);
     }
 }
 
-fn add_stuff(mess: &mut Vec<String>) {
-    mess.push(String::from("A"));
+fn get_nbr_of_lines(logs: &Vec<TaskLog>) -> usize {
+    logs.iter().map(|log| log.nbr_of_lines()).sum()
+}
+
+fn clear_lines(nbr_of_lines: usize) {
+    print!(
+        "{}{}",
+        cursor::Up(u16::try_from(nbr_of_lines).unwrap()),
+        clear::AfterCursor
+    );
+}
+
+fn print_all_logs(logs: &Vec<TaskLog>) {
+    logs.iter().for_each(|log| log.print());
 }
 
 fn example() {
