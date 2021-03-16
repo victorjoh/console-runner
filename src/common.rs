@@ -1,20 +1,11 @@
-pub trait Task<M>: Send {
-    fn perform(&self, logger: &dyn Logger<M>);
-    fn name(&self) -> TaskName;
-}
-
-pub trait Logger<M> {
-    fn log(&self, message: M);
-}
-
 pub type TaskName = String;
 
-pub trait View<M> {
+pub trait View {
     fn initialize(&mut self, tasks: Vec<TaskName>);
-    fn show(&mut self, task_message: TaskMessage<M>);
+    fn show(&mut self, task_message: TaskMessage);
 }
 
-pub struct TaskMessage<M> {
-    pub message: M,
+pub struct TaskMessage {
+    pub message: String,
     pub task_name: TaskName,
 }

@@ -4,6 +4,7 @@ mod view;
 
 use common::*;
 use std::thread;
+use tasks::{Logger, Task};
 use view::*;
 
 use std::time::Duration;
@@ -13,8 +14,8 @@ struct Problem {
     name: TaskName,
 }
 
-impl Task<String> for Problem {
-    fn perform(&self, logger: &dyn Logger<String>) {
+impl Task for Problem {
+    fn perform(&self, logger: &dyn Logger) {
         for val in &self.vals {
             logger.log(val.to_string());
             thread::sleep(Duration::from_secs(1));

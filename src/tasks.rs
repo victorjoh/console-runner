@@ -3,13 +3,22 @@ use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::thread;
 
-struct ThreadLogger<M> {
-    sender: Sender<TaskMessage<M>>,
+pub trait Task: Send {
+    fn perform(&self, logger: &dyn Logger);
+    fn name(&self) -> TaskName;
+}
+
+pub trait Logger {
+    fn log(&self, message: String);
+}
+
+struct ThreadLogger {
+    sender: Sender<TaskMessage>,
     task_name: TaskName,
 }
 
-impl<M> Logger<M> for ThreadLogger<M> {
-    fn log(&self, message: M) {
+impl Logger for ThreadLogger {
+    fn log(&self, message: String) {
         let task_message = TaskMessage {
             message,
             task_name: self.task_name.clone(),
@@ -18,10 +27,7 @@ impl<M> Logger<M> for ThreadLogger<M> {
     }
 }
 
-pub fn perform<M>(tasks: Vec<Box<dyn Task<M>>>, view: &mut dyn View<M>)
-where
-    M: Send + 'static,
-{
+pub fn perform(tasks: Vec<Box<dyn Task>>, view: &mut dyn View) {
     if tasks.len() == 0 {
         return;
     }
@@ -49,10 +55,7 @@ fn multiply_senders<T>(a_sender: Sender<T>, amount: usize) -> Vec<Sender<T>> {
     return senders;
 }
 
-fn spawn_thread<M>(task: Box<dyn Task<M>>, sender: Sender<TaskMessage<M>>)
-where
-    M: Send + 'static,
-{
+fn spawn_thread(task: Box<dyn Task>, sender: Sender<TaskMessage>) {
     let logger = ThreadLogger {
         sender,
         task_name: task.name(),

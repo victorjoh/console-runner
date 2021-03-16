@@ -63,7 +63,7 @@ impl Console {
     }
 }
 
-impl View<String> for Console {
+impl View for Console {
     fn initialize(&mut self, tasks: Vec<TaskName>) {
         self.logs = tasks
             .into_iter()
@@ -72,7 +72,7 @@ impl View<String> for Console {
         print_logs(&self.logs);
     }
 
-    fn show(&mut self, task_message: TaskMessage<String>) {
+    fn show(&mut self, task_message: TaskMessage) {
         clear_lines(get_nbr_of_visible_lines(&self.logs));
         add_message_to_matching_log(task_message, &mut self.logs);
         print_logs(&self.logs);
@@ -91,7 +91,7 @@ fn get_nbr_of_visible_lines(logs: &Vec<TaskLog>) -> usize {
     logs.iter().map(|log| log.nbr_of_visible_lines()).sum()
 }
 
-fn add_message_to_matching_log(task_message: TaskMessage<String>, logs: &mut Vec<TaskLog>) {
+fn add_message_to_matching_log(task_message: TaskMessage, logs: &mut Vec<TaskLog>) {
     let log = logs
         .iter_mut()
         .find(|log| log.name == task_message.task_name)
