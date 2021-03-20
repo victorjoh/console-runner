@@ -13,17 +13,27 @@ pub trait Logger {
 }
 
 struct ThreadLogger {
-    sender: Sender<TaskMessage>,
+    sender: Sender<TaskUpdate>,
     task_name: TaskName,
 }
 
 impl Logger for ThreadLogger {
     fn log(&self, message: String) {
-        let task_message = TaskMessage {
-            message,
+        self.send_update(TaskChange::TaskMessage(message));
+    }
+}
+
+impl ThreadLogger {
+    fn set_status(&self, status: Status) {
+        self.send_update(TaskChange::TaskStatus(status));
+    }
+
+    fn send_update(&self, change: TaskChange) {
+        let task_status = TaskUpdate {
             task_name: self.task_name.clone(),
+            change,
         };
-        self.sender.send(task_message).unwrap();
+        self.sender.send(task_status).unwrap();
     }
 }
 
@@ -42,7 +52,7 @@ pub fn perform(tasks: Vec<Box<dyn Task>>, view: &mut dyn View) {
         .for_each(|(task, sender)| spawn_thread(task, sender));
 
     for received in receiver {
-        view.show(received);
+        view.update(received);
     }
 }
 
@@ -55,10 +65,16 @@ fn multiply_senders<T>(a_sender: Sender<T>, amount: usize) -> Vec<Sender<T>> {
     return senders;
 }
 
-fn spawn_thread(task: Box<dyn Task>, sender: Sender<TaskMessage>) {
+fn spawn_thread(task: Box<dyn Task>, sender: Sender<TaskUpdate>) {
     let logger = ThreadLogger {
         sender,
         task_name: task.name(),
     };
-    thread::spawn(move || task.perform(&logger));
+    thread::spawn(move || perform_thread(task, logger));
+}
+
+fn perform_thread(task: Box<dyn Task>, logger: ThreadLogger) {
+    logger.set_status(Status::Running);
+    task.perform(&logger);
+    logger.set_status(Status::Finished);
 }

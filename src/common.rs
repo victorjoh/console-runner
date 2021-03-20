@@ -1,11 +1,23 @@
-pub type TaskName = String;
-
 pub trait View {
     fn initialize(&mut self, tasks: Vec<TaskName>);
-    fn show(&mut self, task_message: TaskMessage);
+    fn update(&mut self, task_update: TaskUpdate);
 }
 
-pub struct TaskMessage {
-    pub message: String,
+pub struct TaskUpdate {
     pub task_name: TaskName,
+    pub change: TaskChange
+}
+
+pub enum TaskChange {
+    TaskStatus(Status),
+    TaskMessage(LogMessage)
+}
+
+pub type TaskName = String;
+pub type LogMessage = String;
+
+pub enum Status {
+    Pending,
+    Running,
+    Finished,
 }

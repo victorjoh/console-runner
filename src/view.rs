@@ -1,8 +1,20 @@
 use crate::common::*;
 use std::convert::TryFrom;
-use termion::{clear, color, cursor, style};
+use termion::{clear, color, color::Color, cursor, style};
 
 const MAX_LINES_PER_LOG: usize = 5;
+const PENDING_TEXT: StatusText = StatusText {
+    color: &color::Blue,
+    characters: "Pending",
+};
+const RUNNING_TEXT: StatusText = StatusText {
+    color: &color::Cyan,
+    characters: "Running",
+};
+const FINISHED_TEXT: StatusText = StatusText {
+    color: &color::Green,
+    characters: "Finished",
+};
 
 pub struct Console {
     logs: Vec<TaskLog>,
@@ -10,22 +22,26 @@ pub struct Console {
 
 struct TaskLog {
     name: TaskName,
-    messages: Vec<String>,
+    status: Status,
+    messages: Vec<LogMessage>,
 }
 
 impl TaskLog {
     fn new(name: TaskName) -> TaskLog {
         TaskLog {
             name,
+            status: Status::Pending,
             messages: Vec::new(),
         }
     }
 
     fn print(&self) {
+        let status_text = format(&self.status);
         println!(
-            "{}{}Pending{} {}",
-            color::Fg(color::Blue),
+            "{}{}{}{} {}",
             style::Bold,
+            color::Fg(status_text.color),
+            status_text.characters,
             style::Reset,
             self.name
         );
@@ -38,9 +54,26 @@ impl TaskLog {
         floor(1 + self.messages.len(), MAX_LINES_PER_LOG)
     }
 
-    fn add_message(&mut self, message: String) {
+    fn add_message(&mut self, message: LogMessage) {
         self.messages.push(message);
     }
+
+    fn set_status(&mut self, status: Status) {
+        self.status = status;
+    }
+}
+
+fn format(status: &Status) -> StatusText {
+    match *status {
+        Status::Pending => PENDING_TEXT,
+        Status::Running => RUNNING_TEXT,
+        Status::Finished => FINISHED_TEXT,
+    }
+}
+
+struct StatusText {
+    color: &'static dyn Color,
+    characters: &'static str,
 }
 
 fn get_last_n<'a, T>(vector: &'a Vec<T>, n: usize) -> &'a [T] {
@@ -72,9 +105,13 @@ impl View for Console {
         print_logs(&self.logs);
     }
 
-    fn show(&mut self, task_message: TaskMessage) {
+    fn update(&mut self, task_update: TaskUpdate) {
         clear_lines(get_nbr_of_visible_lines(&self.logs));
-        add_message_to_matching_log(task_message, &mut self.logs);
+        let log = get_matching_log(task_update.task_name, &mut self.logs);
+        match task_update.change {
+            TaskChange::TaskMessage(message) => log.add_message(message),
+            TaskChange::TaskStatus(status) => log.set_status(status),
+        }
         print_logs(&self.logs);
     }
 }
@@ -91,12 +128,8 @@ fn get_nbr_of_visible_lines(logs: &Vec<TaskLog>) -> usize {
     logs.iter().map(|log| log.nbr_of_visible_lines()).sum()
 }
 
-fn add_message_to_matching_log(task_message: TaskMessage, logs: &mut Vec<TaskLog>) {
-    let log = logs
-        .iter_mut()
-        .find(|log| log.name == task_message.task_name)
-        .unwrap();
-    log.add_message(task_message.message);
+fn get_matching_log(task_name: TaskName, logs: &mut Vec<TaskLog>) -> &mut TaskLog {
+    logs.iter_mut().find(|log| log.name == task_name).unwrap()
 }
 
 fn print_logs(logs: &Vec<TaskLog>) {
