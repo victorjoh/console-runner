@@ -13,11 +13,12 @@ struct Problem {
 }
 
 impl Task for Problem {
-    fn run(&self, logger: &dyn Logger) {
+    fn run(&self, logger: &dyn Logger) -> Option<Answer> {
         for val in &self.vals {
             logger.log(val.to_string());
             thread::sleep(Duration::from_secs(1));
         }
+        return Some(format!("{}", self.vals.len()));
     }
 
     fn name(&self) -> TaskName {

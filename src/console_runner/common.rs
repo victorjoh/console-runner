@@ -16,8 +16,10 @@ pub enum TaskChange {
 pub type TaskName = String;
 pub type LogMessage = String;
 
+pub type Answer = String;
+
 pub enum Status {
     Pending,
     Running,
-    Finished,
+    Finished(Option<Answer>),
 }

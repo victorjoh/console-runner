@@ -36,44 +36,73 @@ impl TaskLog {
     }
 
     fn print(&self) {
-        let status_text = format(&self.status);
-        println!(
-            "{}{}{}{} {}",
-            style::Bold,
-            color::Fg(status_text.color),
-            status_text.characters,
-            style::Reset,
-            self.name
-        );
-        for message in get_last_n(&self.messages, MAX_LINES_PER_LOG - 1) {
-            println!("  {}", message);
-        }
+        println!("{}", format_status(&self.status, &self.name));
+        print_messages(&self.status, &self.messages);
     }
 
     fn nbr_of_visible_lines(&self) -> usize {
-        floor(1 + self.messages.len(), MAX_LINES_PER_LOG)
+        match self.status {
+            Status::Finished(_) => 1,
+            _ => floor(1 + self.messages.len(), MAX_LINES_PER_LOG),
+        }
     }
-
+    
     fn add_message(&mut self, message: LogMessage) {
         self.messages.push(message);
     }
-
+    
     fn set_status(&mut self, status: Status) {
         self.status = status;
     }
 }
 
-fn format(status: &Status) -> StatusText {
-    match *status {
-        Status::Pending => PENDING_TEXT,
-        Status::Running => RUNNING_TEXT,
-        Status::Finished => FINISHED_TEXT,
+fn format_status(status: &Status, task_name: &TaskName) -> String {
+    match status {
+        Status::Pending => format_status_line(PENDING_TEXT, task_name),
+        Status::Running => format_status_line(RUNNING_TEXT, task_name),
+        Status::Finished(result) => match result {
+            Some(answer) => {
+                format_detailed_status_line(FINISHED_TEXT, task_name, format!(": {}", answer))
+            }
+            None => format_status_line(FINISHED_TEXT, task_name),
+        },
     }
+}
+
+fn format_status_line(status_text: StatusText, task_name: &TaskName) -> String {
+    format_detailed_status_line(status_text, task_name, String::from(""))
+}
+
+fn format_detailed_status_line(
+    status_text: StatusText,
+    task_name: &TaskName,
+    details: String,
+) -> String {
+    format!(
+        "{}{}{}{} {}{}",
+        style::Bold,
+        color::Fg(status_text.color),
+        status_text.characters,
+        style::Reset,
+        task_name,
+        details
+    )
 }
 
 struct StatusText {
     color: &'static dyn Color,
     characters: &'static str,
+}
+
+fn print_messages(status: &Status, messages: &Vec<LogMessage>) {
+    match status {
+        Status::Finished(_) => (),
+        _ => {
+            for message in get_last_n(messages, MAX_LINES_PER_LOG - 1) {
+                println!("  {}", message);
+            }
+        }
+    }
 }
 
 fn get_last_n<'a, T>(vector: &'a Vec<T>, n: usize) -> &'a [T] {

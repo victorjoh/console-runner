@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 pub trait Task: Send {
-    fn run(&self, logger: &dyn Logger);
+    fn run(&self, logger: &dyn Logger) -> Option<Answer>;
     fn name(&self) -> TaskName;
 }
 
@@ -107,6 +107,6 @@ fn get_next_task(task_queue: &Arc<Mutex<VecDeque<Box<dyn Task>>>>) -> Option<Box
 
 fn run_task(task: Box<dyn Task>, logger: &ThreadLogger) {
     logger.set_status(Status::Running);
-    task.run(logger);
-    logger.set_status(Status::Finished);
+    let answer = task.run(logger);
+    logger.set_status(Status::Finished(answer));
 }
