@@ -1,11 +1,9 @@
-mod common;
-mod tasks;
-mod view;
+mod console_runner;
 
-use common::*;
+use console_runner::common::*;
 use std::thread;
-use tasks::{Logger, Task, TaskRunner};
-use view::*;
+use console_runner::tasks::{Logger, Task, TaskRunner};
+use console_runner::view::*;
 
 use std::time::Duration;
 

@@ -1,4 +1,4 @@
-use crate::common::*;
+use super::common::*;
 use std::convert::TryFrom;
 use termion::{clear, color, color::Color, cursor, style};
 
