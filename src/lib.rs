@@ -4,7 +4,7 @@ mod view;
 
 use common::*;
 use std::thread;
-use tasks::{Logger, Task};
+use tasks::{Logger, Task, TaskRunner};
 use view::*;
 
 use std::time::Duration;
@@ -15,7 +15,7 @@ struct Problem {
 }
 
 impl Task for Problem {
-    fn perform(&self, logger: &dyn Logger) {
+    fn run(&self, logger: &dyn Logger) {
         for val in &self.vals {
             logger.log(val.to_string());
             thread::sleep(Duration::from_secs(1));
@@ -54,6 +54,23 @@ pub fn run(day: Option<usize>, session: Option<String>) {
         ],
         name: String::from("p2"),
     };
+    let p3 = Problem {
+        vals: vec![
+            // String::from("this is a really long line that will have to be line broken, otherwise bad things will happen?"),
+            String::from("messages"),
+            String::from("for"),
+            String::from("you"),
+            String::from("less"),
+            String::from("speaking"),
+            String::from("with"),
+            String::from("me"),
+        ],
+        name: String::from("p3"),
+    };
 
-    tasks::perform(vec![Box::from(p1), Box::from(p2)], &mut Console::new());
+    let problem_runner = TaskRunner { thread_count: 2 };
+    problem_runner.run(
+        vec![Box::from(p1), Box::from(p2), Box::from(p3)],
+        &mut Console::new(),
+    );
 }
