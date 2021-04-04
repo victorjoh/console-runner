@@ -6,3 +6,4 @@ Console Runner to do:
 2. Part1 and part2 split
 3. Multiline logs
 4. Console resize
+5. Console input messes up the output

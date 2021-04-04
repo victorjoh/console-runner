@@ -5,8 +5,10 @@ use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+pub type TaskResult = Result<Answer, Error>;
+
 pub trait Task: Send {
-    fn run(&self, logger: &dyn Logger) -> Option<Answer>;
+    fn run(&self, logger: &dyn Logger) -> TaskResult;
     fn name(&self) -> TaskName;
 }
 
@@ -107,6 +109,9 @@ fn get_next_task(task_queue: &Arc<Mutex<VecDeque<Box<dyn Task>>>>) -> Option<Box
 
 fn run_task(task: Box<dyn Task>, logger: &ThreadLogger) {
     logger.set_status(Status::Running);
-    let answer = task.run(logger);
-    logger.set_status(Status::Finished(answer));
+    let result = task.run(logger);
+    match result {
+        Ok(answer) => logger.set_status(Status::Finished(answer)),
+        Err(message) => logger.set_status(Status::Failed(message)),
+    }
 }

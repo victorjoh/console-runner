@@ -1,29 +1,34 @@
 mod console_runner;
 
 use console_runner::common::*;
-use std::thread;
-use console_runner::tasks::{Logger, Task, TaskRunner};
+use console_runner::tasks::{Logger, Task, TaskResult, TaskRunner};
 use console_runner::view::*;
+use std::thread;
 
 use std::time::Duration;
 
 struct Problem {
     vals: Vec<String>,
     name: TaskName,
+    result: TaskResult,
 }
 
 impl Task for Problem {
-    fn run(&self, logger: &dyn Logger) -> Option<Answer> {
+    fn run(&self, logger: &dyn Logger) -> TaskResult {
         for val in &self.vals {
             logger.log(val.to_string());
             thread::sleep(Duration::from_secs(1));
         }
-        return Some(format!("{}", self.vals.len()));
+        return self.result.clone();
     }
 
     fn name(&self) -> TaskName {
         self.name.clone()
     }
+}
+
+struct ErrorProblem {
+    name: TaskName,
 }
 
 pub fn run(day: Option<usize>, session: Option<String>) {
@@ -35,10 +40,9 @@ pub fn run(day: Option<usize>, session: Option<String>) {
             String::from("thread"),
             String::from("goodbye"),
             String::from("to"),
-            String::from("all"),
-            String::from("needles"),
         ],
         name: String::from("p1"),
+        result: Err(String::from("Something went wrong!")),
     };
     let p2 = Problem {
         vals: vec![
@@ -52,6 +56,7 @@ pub fn run(day: Option<usize>, session: Option<String>) {
             String::from("me"),
         ],
         name: String::from("p2"),
+        result: Ok(Some(String::from("5"))),
     };
     let p3 = Problem {
         vals: vec![
@@ -65,6 +70,7 @@ pub fn run(day: Option<usize>, session: Option<String>) {
             String::from("me"),
         ],
         name: String::from("p3"),
+        result: Ok(None),
     };
 
     let problem_runner = TaskRunner { thread_count: 2 };

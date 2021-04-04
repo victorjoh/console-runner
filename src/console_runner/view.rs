@@ -15,6 +15,10 @@ const FINISHED_TEXT: StatusText = StatusText {
     color: &color::Green,
     characters: "Finished",
 };
+const FAILED_TEXT: StatusText = StatusText {
+    color: &color::Red,
+    characters: "Failed",
+};
 
 pub struct Console {
     logs: Vec<TaskLog>,
@@ -43,14 +47,13 @@ impl TaskLog {
     fn nbr_of_visible_lines(&self) -> usize {
         match self.status {
             Status::Finished(_) => 1,
+            Status::Failed(_) => 2 + self.messages.len(),
             _ => floor(1 + self.messages.len(), MAX_LINES_PER_LOG),
         }
     }
-    
     fn add_message(&mut self, message: LogMessage) {
         self.messages.push(message);
     }
-    
     fn set_status(&mut self, status: Status) {
         self.status = status;
     }
@@ -66,6 +69,7 @@ fn format_status(status: &Status, task_name: &TaskName) -> String {
             }
             None => format_status_line(FINISHED_TEXT, task_name),
         },
+        Status::Failed(_) => format_status_line(FAILED_TEXT, task_name),
     }
 }
 
@@ -97,6 +101,12 @@ struct StatusText {
 fn print_messages(status: &Status, messages: &Vec<LogMessage>) {
     match status {
         Status::Finished(_) => (),
+        Status::Failed(error) => {
+            for message in messages {
+                println!("  {}", message);
+            }
+            println!("  {}", error);
+        }
         _ => {
             for message in get_last_n(messages, MAX_LINES_PER_LOG - 1) {
                 println!("  {}", message);
@@ -107,8 +117,8 @@ fn print_messages(status: &Status, messages: &Vec<LogMessage>) {
 
 fn get_last_n<'a, T>(vector: &'a Vec<T>, n: usize) -> &'a [T] {
     let start_index = vector.len().saturating_sub(n);
-    let (_, last_4) = vector.split_at(start_index);
-    return last_4;
+    let (_, last_n) = vector.split_at(start_index);
+    return last_n;
 }
 
 fn floor(x: usize, y: usize) -> usize {
