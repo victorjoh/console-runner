@@ -27,7 +27,7 @@ pub struct Console {
 struct TaskLog {
     name: TaskName,
     status: Status,
-    messages: Vec<LogMessage>,
+    lines: String,
 }
 
 impl TaskLog {
@@ -35,28 +35,34 @@ impl TaskLog {
         TaskLog {
             name,
             status: Status::Pending,
-            messages: Vec::new(),
+            lines: String::new(),
         }
     }
 
     fn print(&self) {
         println!("{}", format_status(&self.status, &self.name));
-        print_messages(&self.status, &self.messages);
+        print_messages(&self.status, &self.lines);
     }
 
     fn nbr_of_visible_lines(&self) -> usize {
-        match self.status {
+        match &self.status {
             Status::Finished(_) => 1,
-            Status::Failed(_) => 2 + self.messages.len(),
-            _ => floor(1 + self.messages.len(), MAX_LINES_PER_LOG),
+            Status::Failed(error) => 1 + get_lines(error) + get_lines(&self.lines),
+            _ => floor(1 + get_lines(&self.lines), MAX_LINES_PER_LOG),
         }
     }
+
     fn add_message(&mut self, message: LogMessage) {
-        self.messages.push(message);
+        self.lines.push_str(message.as_str());
     }
+
     fn set_status(&mut self, status: Status) {
         self.status = status;
     }
+}
+
+fn get_lines(lines: &str) -> usize {
+    lines.split_terminator('\n').count()
 }
 
 fn format_status(status: &Status, task_name: &TaskName) -> String {
@@ -98,27 +104,28 @@ struct StatusText {
     characters: &'static str,
 }
 
-fn print_messages(status: &Status, messages: &Vec<LogMessage>) {
+fn print_messages(status: &Status, messages: &str) {
     match status {
         Status::Finished(_) => (),
         Status::Failed(error) => {
-            for message in messages {
+            for message in messages.split_terminator('\n') {
                 println!("  {}", message);
             }
             println!("  {}", error);
         }
         _ => {
-            for message in get_last_n(messages, MAX_LINES_PER_LOG - 1) {
+            if messages.is_empty() {
+                return;
+            }
+            let most_recent_messages: Vec<&str> = messages
+                .rsplit_terminator('\n')
+                .take(MAX_LINES_PER_LOG - 1)
+                .collect();
+            for message in most_recent_messages.iter().rev() {
                 println!("  {}", message);
             }
         }
     }
-}
-
-fn get_last_n<'a, T>(vector: &'a Vec<T>, n: usize) -> &'a [T] {
-    let start_index = vector.len().saturating_sub(n);
-    let (_, last_n) = vector.split_at(start_index);
-    return last_n;
 }
 
 fn floor(x: usize, y: usize) -> usize {
