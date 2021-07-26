@@ -1,5 +1,6 @@
 use super::common::*;
 use std::collections::VecDeque;
+use std::panic;
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
@@ -109,9 +110,22 @@ fn get_next_task(task_queue: &Arc<Mutex<VecDeque<Box<dyn Task>>>>) -> Option<Box
 
 fn run_task(task: Box<dyn Task>, logger: &ThreadLogger) {
     logger.set_status(Status::Running);
-    let result = task.run(logger);
-    match result {
-        Ok(answer) => logger.set_status(Status::Finished(answer)),
-        Err(message) => logger.set_status(Status::Failed(message)),
-    }
+    let unwind_result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+        let result = task.run(logger);
+        match result {
+            Ok(answer) => logger.set_status(Status::Finished(answer)),
+            Err(message) => logger.set_status(Status::Failed(message)),
+        }
+    }));
+
+    if let Err(panic) = unwind_result {
+        match panic.downcast::<&str>() {
+            Ok(panic_msg) => {
+                logger.set_status(Status::Failed(format!("Task panicked: {}", panic_msg)))
+            }
+            Err(_) => {
+                logger.set_status(Status::Failed(String::from("Task panicked")));
+            }
+        }
+    };
 }

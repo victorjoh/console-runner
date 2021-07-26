@@ -27,12 +27,27 @@ impl Task for Problem {
     }
 }
 
-struct ErrorProblem {
+struct PanicProblem {
+    vals: Vec<String>,
     name: TaskName,
 }
 
+impl Task for PanicProblem {
+    fn run(&self, logger: &dyn Logger) -> TaskResult {
+        for val in &self.vals {
+            logger.log(val.to_string());
+            thread::sleep(Duration::from_secs(1));
+        }
+        panic!("I don't know what to do!");
+    }
+
+    fn name(&self) -> TaskName {
+        self.name.clone()
+    }
+}
+
 pub fn run(day: Option<usize>, session: Option<String>) {
-    let p1 = Problem {
+    let p1 = PanicProblem {
         vals: vec![
             String::from("hi"),
             String::from("from"),
@@ -42,7 +57,6 @@ pub fn run(day: Option<usize>, session: Option<String>) {
             String::from("to"),
         ],
         name: String::from("p1"),
-        result: Err(String::from("Something went wrong!")),
     };
     let p2 = Problem {
         vals: vec![
@@ -56,7 +70,7 @@ pub fn run(day: Option<usize>, session: Option<String>) {
             String::from("me"),
         ],
         name: String::from("p2"),
-        result: Ok(Some(String::from("5"))),
+        result: Err(String::from("Something went wrong!")),
     };
     let p3 = Problem {
         vals: vec![
@@ -70,12 +84,26 @@ pub fn run(day: Option<usize>, session: Option<String>) {
             String::from("me"),
         ],
         name: String::from("p3"),
+        result: Ok(Some(String::from("5"))),
+    };
+    let p4 = Problem {
+        vals: vec![
+            // String::from("this is a really long line that will have to be line broken, otherwise bad things will happen?"),
+            String::from("messages"),
+            String::from("for"),
+            String::from("you"),
+            String::from("less"),
+            String::from("speaking"),
+            String::from("with"),
+            String::from("me"),
+        ],
+        name: String::from("p4"),
         result: Ok(None),
     };
 
     let problem_runner = TaskRunner { thread_count: 2 };
     problem_runner.run(
-        vec![Box::from(p1), Box::from(p2), Box::from(p3)],
+        vec![Box::from(p1), Box::from(p2), Box::from(p3), Box::from(p4)],
         &mut Console::new(),
     );
 }
