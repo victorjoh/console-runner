@@ -1,10 +1,13 @@
 use super::common::*;
+use lazy_static;
+use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::panic;
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
+use std::thread::ThreadId;
 
 pub type TaskResult = Result<Answer, Error>;
 
@@ -24,6 +27,7 @@ pub struct TaskRunner {
 struct ThreadLogger {
     sender: Sender<TaskUpdate>,
     task_name: Option<TaskName>,
+    thread_id: Option<ThreadId>,
 }
 
 impl Logger for ThreadLogger {
@@ -37,11 +41,16 @@ impl ThreadLogger {
         ThreadLogger {
             sender,
             task_name: None,
+            thread_id: None,
         }
     }
 
     fn set_task_name(&mut self, task_name: TaskName) {
         self.task_name = Some(task_name);
+    }
+
+    fn set_thread_id(&mut self, thread_id: ThreadId) {
+        self.thread_id = Some(thread_id);
     }
 
     fn set_status(&self, status: Status) {
@@ -61,6 +70,10 @@ impl ThreadLogger {
     }
 }
 
+lazy_static! {
+    static ref LOGGERS: RwLock<HashMap<ThreadId, ThreadLogger>> = HashMap::new().into();
+}
+
 impl TaskRunner {
     pub fn run(&self, tasks: Vec<Box<dyn Task>>, view: &mut dyn View) {
         if tasks.len() == 0 {
@@ -70,6 +83,14 @@ impl TaskRunner {
         let (a_sender, receiver) = mpsc::channel();
         let senders = multiply_senders(a_sender, self.thread_count);
         let task_queue = Arc::new(Mutex::new(VecDeque::from(tasks)));
+        panic::set_hook(Box::new(|info| {
+            let thread_id = thread::current().id();
+            if let Some(logger) = LOGGERS.read().unwrap().get(&thread_id) {
+                logger.set_status(Status::Failed(String::from(
+                    info.location().unwrap().file(),
+                )));
+            }
+        }));
         senders
             .into_iter()
             .for_each(|sender| run_task_in_thread(Arc::clone(&task_queue), sender));
@@ -97,6 +118,8 @@ fn multiply_senders<T>(a_sender: Sender<T>, amount: u16) -> Vec<Sender<T>> {
 fn run_task_in_thread(task_queue: Arc<Mutex<VecDeque<Box<dyn Task>>>>, sender: Sender<TaskUpdate>) {
     let mut logger = ThreadLogger::new(sender);
     thread::spawn(move || {
+        let thread_id = thread::current().id();
+        LOGGERS.write().unwrap().insert(thread_id, logger);
         while let Some(task) = get_next_task(&task_queue) {
             logger.set_task_name(task.name());
             run_task(task, &logger);
@@ -110,15 +133,15 @@ fn get_next_task(task_queue: &Arc<Mutex<VecDeque<Box<dyn Task>>>>) -> Option<Box
 
 fn run_task(task: Box<dyn Task>, logger: &ThreadLogger) {
     logger.set_status(Status::Running);
-    let unwind_result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
-        let result = task.run(logger);
-        match result {
-            Ok(answer) => logger.set_status(Status::Finished(answer)),
-            Err(message) => logger.set_status(Status::Failed(message)),
-        }
-    }));
+    // let unwind_result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+    let result = task.run(logger);
+    match result {
+        Ok(answer) => logger.set_status(Status::Finished(answer)),
+        Err(message) => logger.set_status(Status::Failed(message)),
+    };
+    // }));
 
-    if let Err(panic) = unwind_result {
+    /*if let Err(panic) = unwind_result {
         match panic.downcast::<&str>() {
             Ok(panic_msg) => {
                 logger.set_status(Status::Failed(format!("Task panicked: {}", panic_msg)))
@@ -127,5 +150,5 @@ fn run_task(task: Box<dyn Task>, logger: &ThreadLogger) {
                 logger.set_status(Status::Failed(String::from("Task panicked")));
             }
         }
-    };
+    };*/
 }
