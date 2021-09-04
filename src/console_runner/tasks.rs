@@ -27,7 +27,6 @@ pub struct TaskRunner {
 struct ThreadLogger {
     sender: Sender<TaskUpdate>,
     task_name: Option<TaskName>,
-    thread_id: Option<ThreadId>,
 }
 
 impl Logger for ThreadLogger {
@@ -41,16 +40,15 @@ impl ThreadLogger {
         ThreadLogger {
             sender,
             task_name: None,
-            thread_id: None,
         }
     }
 
-    fn set_task_name(&mut self, task_name: TaskName) {
+    fn set_task_name(&self, task_name: TaskName) -> ThreadLogger {
         self.task_name = Some(task_name);
-    }
-
-    fn set_thread_id(&mut self, thread_id: ThreadId) {
-        self.thread_id = Some(thread_id);
+        ThreadLogger {
+            sender: self.sender.clone(),
+            task_name: Some(task_name),
+        }
     }
 
     fn set_status(&self, status: Status) {
@@ -116,13 +114,15 @@ fn multiply_senders<T>(a_sender: Sender<T>, amount: u16) -> Vec<Sender<T>> {
 }
 
 fn run_task_in_thread(task_queue: Arc<Mutex<VecDeque<Box<dyn Task>>>>, sender: Sender<TaskUpdate>) {
-    let mut logger = ThreadLogger::new(sender);
+    let logger = ThreadLogger::new(sender);
     thread::spawn(move || {
         let thread_id = thread::current().id();
-        LOGGERS.write().unwrap().insert(thread_id, logger);
         while let Some(task) = get_next_task(&task_queue) {
-            logger.set_task_name(task.name());
-            run_task(task, &logger);
+            let a = LOGGERS.read().unwrap();
+            let la = a.get(&thread_id).unwrap();
+            let lb = la.set_task_name(task.name());
+            LOGGERS.write().unwrap().insert(thread_id, lb);
+            run_task(task, &lb);
         }
     });
 }
