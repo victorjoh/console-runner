@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::panic;
 use std::sync::mpsc;
-use std::sync::mpsc::Sender;
+use std::sync::mpsc::SyncSender;
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 use std::thread::ThreadId;
@@ -25,7 +25,7 @@ pub struct TaskRunner {
 }
 
 struct ThreadLogger {
-    sender: Sender<TaskUpdate>,
+    sender: SyncSender<TaskUpdate>,
     task_name: Option<TaskName>,
 }
 
@@ -36,7 +36,7 @@ impl Logger for ThreadLogger {
 }
 
 impl ThreadLogger {
-    fn new(sender: Sender<TaskUpdate>) -> ThreadLogger {
+    fn new(sender: SyncSender<TaskUpdate>) -> ThreadLogger {
         ThreadLogger {
             sender,
             task_name: None,
@@ -44,7 +44,6 @@ impl ThreadLogger {
     }
 
     fn set_task_name(&self, task_name: TaskName) -> ThreadLogger {
-        self.task_name = Some(task_name);
         ThreadLogger {
             sender: self.sender.clone(),
             task_name: Some(task_name),
@@ -78,7 +77,7 @@ impl TaskRunner {
             return;
         }
         view.initialize(tasks.iter().map(|task| task.name()).collect());
-        let (a_sender, receiver) = mpsc::channel();
+        let (a_sender, receiver) = mpsc::sync_channel(self.thread_count.into());
         let senders = multiply_senders(a_sender, self.thread_count);
         let task_queue = Arc::new(Mutex::new(VecDeque::from(tasks)));
         panic::set_hook(Box::new(|info| {
@@ -98,7 +97,7 @@ impl TaskRunner {
     }
 }
 
-fn multiply_senders<T>(a_sender: Sender<T>, amount: u16) -> Vec<Sender<T>> {
+fn multiply_senders<T>(a_sender: SyncSender<T>, amount: u16) -> Vec<SyncSender<T>> {
     if amount == 0 {
         return Vec::new();
     } else if amount == 1 {
@@ -113,16 +112,17 @@ fn multiply_senders<T>(a_sender: Sender<T>, amount: u16) -> Vec<Sender<T>> {
     return senders;
 }
 
-fn run_task_in_thread(task_queue: Arc<Mutex<VecDeque<Box<dyn Task>>>>, sender: Sender<TaskUpdate>) {
+fn run_task_in_thread(task_queue: Arc<Mutex<VecDeque<Box<dyn Task>>>>, sender: SyncSender<TaskUpdate>) {
     let logger = ThreadLogger::new(sender);
     thread::spawn(move || {
         let thread_id = thread::current().id();
+        LOGGERS.write().unwrap().insert(thread_id, logger);
         while let Some(task) = get_next_task(&task_queue) {
-            let a = LOGGERS.read().unwrap();
-            let la = a.get(&thread_id).unwrap();
-            let lb = la.set_task_name(task.name());
-            LOGGERS.write().unwrap().insert(thread_id, lb);
-            run_task(task, &lb);
+            let mut loggers = LOGGERS.write().unwrap();
+            let old_logger = loggers.get(&thread_id).unwrap();
+            let new_logger = old_logger.set_task_name(task.name());
+            loggers.insert(thread_id, new_logger);
+            run_task(task, loggers.get(&thread_id).unwrap());
         }
     });
 }
