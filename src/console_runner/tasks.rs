@@ -81,11 +81,33 @@ impl TaskRunner {
         let senders = multiply_senders(a_sender, self.thread_count);
         let task_queue = Arc::new(Mutex::new(VecDeque::from(tasks)));
         panic::set_hook(Box::new(|info| {
-            let thread_id = thread::current().id();
-            if let Some(logger) = LOGGERS.read().unwrap().get(&thread_id) {
-                logger.set_status(Status::Failed(String::from(
-                    info.location().unwrap().file(),
-                )));
+            // default hook can be found here: std::panic::default_hook;
+            //
+            // an alternative to using set_hook could be to redirect stderr and
+            // stdout specifically for each thread using io::set_output_capture
+            let msg = match info.payload().downcast_ref::<&'static str>() {
+                Some(s) => *s,
+                None => match info.payload().downcast_ref::<String>() {
+                    Some(s) => &s[..],
+                    None => "Box<Any>",
+                },
+            };
+
+            let thread = thread::current();
+            match LOGGERS.try_read() {
+                Ok(loggers) => {
+                    if let Some(logger) = loggers.get(&thread.id()) {
+                        logger.set_status(Status::Failed(format!(
+                            "thread '{}' panicked at '{}', {}",
+                            thread.name().unwrap_or("<unnamed>"),
+                            msg,
+                            info.location().unwrap()
+                        )));
+                    }
+                }
+                Err(error) => {
+                    println!("failed to acquire logger: {0}", error.to_string());
+                }
             }
         }));
         senders
@@ -112,17 +134,24 @@ fn multiply_senders<T>(a_sender: SyncSender<T>, amount: u16) -> Vec<SyncSender<T
     return senders;
 }
 
-fn run_task_in_thread(task_queue: Arc<Mutex<VecDeque<Box<dyn Task>>>>, sender: SyncSender<TaskUpdate>) {
+fn run_task_in_thread(
+    task_queue: Arc<Mutex<VecDeque<Box<dyn Task>>>>,
+    sender: SyncSender<TaskUpdate>,
+) {
     let logger = ThreadLogger::new(sender);
     thread::spawn(move || {
         let thread_id = thread::current().id();
+
         LOGGERS.write().unwrap().insert(thread_id, logger);
         while let Some(task) = get_next_task(&task_queue) {
             let mut loggers = LOGGERS.write().unwrap();
             let old_logger = loggers.get(&thread_id).unwrap();
             let new_logger = old_logger.set_task_name(task.name());
             loggers.insert(thread_id, new_logger);
-            run_task(task, loggers.get(&thread_id).unwrap());
+            drop(loggers);
+            let loggers = LOGGERS.read().unwrap();
+            let logger = loggers.get(&thread_id).unwrap();
+            run_task(task, logger);
         }
     });
 }
