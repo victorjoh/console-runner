@@ -104,7 +104,7 @@ pub fn run(day: Option<usize>, session: Option<String>) {
 
     let problem_runner = TaskRunner { thread_count: 2 };
     problem_runner.run(
-        vec![Box::from(p1), Box::from(p2),/* Box::from(p3), Box::from(p4)*/],
+        vec![Box::from(p1), Box::from(p2), Box::from(p3), Box::from(p4)],
         &mut Console::new(),
     );
 }

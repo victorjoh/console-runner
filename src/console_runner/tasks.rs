@@ -148,6 +148,8 @@ fn run_task_in_thread(
             let old_logger = loggers.get(&thread_id).unwrap();
             let new_logger = old_logger.set_task_name(task.name());
             loggers.insert(thread_id, new_logger);
+            // drop since we do not want to have write access when running the
+            // task since we need to read the logger if a panic occurs.
             drop(loggers);
             let loggers = LOGGERS.read().unwrap();
             let logger = loggers.get(&thread_id).unwrap();
