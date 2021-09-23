@@ -101,10 +101,77 @@ pub fn run(day: Option<usize>, session: Option<String>) {
         name: String::from("p4"),
         result: Ok(None),
     };
+    let p01 = Problem {
+        vals: vec![
+            String::from("messages"),
+            String::from("for"),
+            String::from("you"),
+            String::from("less"),
+            String::from("speaking"),
+            String::from("with"),
+            String::from("me"),
+            String::from("messages"),
+            String::from("for"),
+            String::from("you"),
+            String::from("less"),
+            String::from("speaking"),
+            String::from("with"),
+            String::from("me"),
+            String::from("messages"),
+            String::from("for"),
+            String::from("you"),
+            String::from("less"),
+            String::from("speaking"),
+            String::from("with"),
+            String::from("me"),
+        ],
+        name: String::from("p01"),
+        result: Ok(Some(String::from("5"))),
+    };
+    let p02 = Problem {
+        vals: vec![
+            String::from("messages"),
+            String::from("for"),
+            String::from("you"),
+            String::from("less"),
+            String::from("speaking"),
+            String::from("with"),
+            String::from("me"),
+        ],
+        name: String::from("p02"),
+        result: Ok(Some(String::from("5"))),
+    };
+    let p03 = Problem {
+        vals: vec![
+            String::from("messages"),
+        ],
+        name: String::from("p03"),
+        result: Ok(Some(String::from("5"))),
+    };
+    let p04 = Problem {
+        vals: vec![
+            String::from("messages"),
+        ],
+        name: String::from("p04"),
+        result: Ok(Some(String::from("5"))),
+    };
+    let p05 = Problem {
+        vals: vec![
+            String::from("messages"),
+            String::from("for"),
+            String::from("you"),
+            String::from("less"),
+            String::from("speaking"),
+            String::from("with"),
+            String::from("me"),
+        ],
+        name: String::from("p05"),
+        result: Ok(Some(String::from("5"))),
+    };
 
     let problem_runner = TaskRunner { thread_count: 2 };
     problem_runner.run(
-        vec![Box::from(p1), Box::from(p2), Box::from(p3), Box::from(p4)],
+        vec![Box::from(p01), Box::from(p02), Box::from(p03), Box::from(p04), Box::from(p05), Box::from(p2), Box::from(p3), Box::from(p4)],
         &mut Console::new(),
     );
 }
