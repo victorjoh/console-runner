@@ -8,7 +8,6 @@ use std::sync::mpsc::SyncSender;
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 use std::thread::{JoinHandle, ThreadId};
-use thread_id;
 
 pub type TaskResult = Result<Answer, Error>;
 
@@ -87,41 +86,42 @@ impl TaskRunner {
         let (a_sender, receiver) = mpsc::sync_channel(self.thread_count.into());
         let senders = multiply_senders(a_sender, self.thread_count);
         let task_queue = Arc::new(Mutex::new(VecDeque::from(tasks)));
-        panic::set_hook(Box::new(|info| {
-            // default hook can be found here: std::panic::default_hook;
-            //
-            // an alternative to using set_hook could be to redirect stderr and
-            // stdout specifically for each thread using io::set_output_capture
-            let msg = match info.payload().downcast_ref::<&'static str>() {
-                Some(s) => *s,
-                None => match info.payload().downcast_ref::<String>() {
-                    Some(s) => &s[..],
-                    None => "Box<Any>",
-                },
-            };
-
-            let thread = thread::current();
-            match LOGGERS.try_read() {
-                Ok(loggers) => {
-                    if let Some(logger) = loggers.get(&thread.id()) {
-                        logger.read().unwrap().set_status(Status::Failed(format!(
-                            "thread '{}' panicked at '{}', {}",
-                            thread.name().unwrap_or("<unnamed>"),
-                            msg,
-                            info.location().unwrap()
-                        )));
-                    }
-                }
-                Err(error) => {
-                    println!("failed to acquire logger: {0}", error.to_string());
-                }
-            }
-        }));
+        panic::set_hook(Box::new(task_thread_panic_hook));
         senders
             .into_iter()
             .for_each(|sender| run_tasks_in_thread(Arc::clone(&task_queue), sender));
         for received in receiver {
             view.update(received);
+        }
+    }
+}
+
+// default hook can be found here: std::panic::default_hook;
+//
+// an alternative to using set_hook could be to redirect stderr and stdout
+// specifically for each thread using io::set_output_capture
+fn task_thread_panic_hook(info: &panic::PanicInfo) {
+    let msg = match info.payload().downcast_ref::<&'static str>() {
+        Some(s) => *s,
+        None => match info.payload().downcast_ref::<String>() {
+            Some(s) => &s[..],
+            None => "Box<Any>",
+        },
+    };
+    let thread = thread::current();
+    match LOGGERS.read() {
+        Ok(loggers) => {
+            if let Some(logger) = loggers.get(&thread.id()) {
+                logger.read().unwrap().set_status(Status::Failed(format!(
+                    "thread '{}' panicked at '{}', {}",
+                    thread.name().unwrap_or("<unnamed>"),
+                    msg,
+                    info.location().unwrap()
+                )));
+            }
+        }
+        Err(error) => {
+            println!("failed to acquire logger: {0}", error.to_string());
         }
     }
 }
