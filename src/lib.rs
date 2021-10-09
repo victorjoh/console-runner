@@ -1,5 +1,5 @@
+#![feature(internal_output_capture)]
 mod console_runner;
-#[macro_use]
 extern crate lazy_static;
 use console_runner::common::*;
 use console_runner::tasks::{Logger, Task, TaskResult, TaskRunner};
@@ -18,6 +18,7 @@ impl Task for Problem {
     fn run(&self, logger: &dyn Logger) -> TaskResult {
         for val in &self.vals {
             logger.log(val.to_string());
+            //println!("Hello, World!");
             thread::sleep(Duration::from_secs(1));
         }
         return self.result.clone();
