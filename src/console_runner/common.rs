@@ -5,13 +5,13 @@ pub trait View {
     fn update(&mut self, task_update: TaskUpdate);
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct TaskUpdate {
     pub task_name: TaskName,
     pub change: TaskChange
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum TaskChange {
     TaskStatus(Status),
     TaskMessage(LogMessage)
@@ -20,7 +20,7 @@ pub enum TaskChange {
 pub type TaskName = String;
 pub type LogMessage = String;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum Status {
     Pending,
     Running,

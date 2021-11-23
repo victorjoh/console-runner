@@ -5,10 +5,9 @@ use std::collections::VecDeque;
 use std::io::set_output_capture;
 use std::panic;
 use std::str::from_utf8;
-use std::sync::mpsc::SyncSender;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::thread::{JoinHandle};
+use std::thread::JoinHandle;
 use std::time::Duration;
 
 // We are locked to using this datatype to send messages since it is the
@@ -26,7 +25,7 @@ pub trait Task: Send {
 }
 
 pub trait Logger {
-    fn log(&self, message: String);
+    fn log(&self, message: &str);
 }
 
 pub struct TaskRunner {
@@ -34,31 +33,33 @@ pub struct TaskRunner {
 }
 
 struct ThreadLogger {
-    sender: LocalStream,
+    sink: LocalStream,
 }
 
 impl Logger for ThreadLogger {
-    fn log(&self, message: String) {
-        self.send_update(TaskChange::TaskMessage(message));
+    fn log(&self, message: &str) {
+        let mut msg = String::from(message);
+        msg.push('\n');
+        self.send_update(TaskChange::TaskMessage(msg));
     }
 }
 
 impl Clone for ThreadLogger {
     fn clone(&self) -> Self {
         Self {
-            sender: self.sender.clone(),
+            sink: self.sink.clone(),
         }
     }
 }
 
-const TASK_CHANGE_START_TAG: &str = "TaskChangeStart ";
-const TASK_CHANGE_END_TAG: &str = " TaskChangeEnd";
-const NAME_CHANGE_START_TAG: &str = "NameChangeStart ";
-const NAME_CHANGE_END_TAG: &str = " NameChangeEnd";
+const TASK_CHANGE_START_TAG: &str = "{TaskChangeStart ";
+const TASK_CHANGE_END_TAG: &str = " TaskChangeEnd}";
+const NAME_CHANGE_START_TAG: &str = "{NameChangeStart ";
+const NAME_CHANGE_END_TAG: &str = " NameChangeEnd}";
 
 impl ThreadLogger {
-    fn new(sender: LocalStream) -> ThreadLogger {
-        ThreadLogger { sender }
+    fn new(sink: LocalStream) -> ThreadLogger {
+        ThreadLogger { sink }
     }
 
     fn set_status(&self, status: Status) {
@@ -66,14 +67,14 @@ impl ThreadLogger {
     }
 
     fn send_update(&self, change: TaskChange) {
-        let mut buffer = self.sender.lock().unwrap();
+        let mut buffer = self.sink.lock().unwrap();
         buffer.extend_from_slice(TASK_CHANGE_START_TAG.as_bytes());
         buffer.append(&mut bincode::serialize(&change).unwrap());
         buffer.extend_from_slice(TASK_CHANGE_END_TAG.as_bytes());
     }
 
     fn switch_task(&self, name: TaskName) {
-        let mut buffer = self.sender.lock().unwrap();
+        let mut buffer = self.sink.lock().unwrap();
         buffer.extend_from_slice(NAME_CHANGE_START_TAG.as_bytes());
         buffer.extend_from_slice(name.as_bytes());
         buffer.extend_from_slice(NAME_CHANGE_END_TAG.as_bytes());
@@ -121,7 +122,7 @@ impl TaskRunner {
                 }
                 buffer.clear();
             }
-            thread::sleep(Duration::from_secs(1));
+            thread::sleep(Duration::from_millis(100));
         }
     }
 }
@@ -133,16 +134,16 @@ enum Change {
 
 #[derive(Logos, Debug, PartialEq)]
 enum Token {
-    #[token("TaskChangeStart ")]
+    #[token("{TaskChangeStart ")]
     TaskChangeStart,
 
-    #[token(" TaskChangeEnd")]
+    #[token(" TaskChangeEnd}")]
     TaskChangeEnd,
 
-    #[token("NameChangeStart ")]
+    #[token("{NameChangeStart ")]
     NameChangeStart,
 
-    #[token(" NameChangeEnd")]
+    #[token(" NameChangeEnd}")]
     NameChangeEnd,
 
     // A character that is not whitespace or is whitespace. Meaning this will
@@ -158,13 +159,35 @@ fn get_task_updates(buffer: &[u8]) -> Vec<Change> {
     let mut lex = Token::lexer(from_utf8(buffer).unwrap());
     let mut changes = Vec::new();
 
+    let mut text = String::new();
+    let mut on_text = false;
     while let Some(token) = lex.next() {
         match token {
-            Token::TaskChangeStart => changes.push(parse_task_change(&mut lex)),
-            Token::NameChangeStart => changes.push(parse_name_change(&mut lex)),
-            Token::Text => changes.push(lex_message(lex.slice(), &mut lex)),
+            Token::TaskChangeStart => {
+                if on_text {
+                    changes.push(Change::TaskChange(TaskChange::TaskMessage(text.clone())));
+                    text.clear();
+                    on_text = false;
+                }
+                changes.push(parse_task_change(&mut lex));
+            }
+            Token::NameChangeStart => {
+                if on_text {
+                    changes.push(Change::TaskChange(TaskChange::TaskMessage(text.clone())));
+                    text.clear();
+                    on_text = false;
+                }
+                changes.push(parse_name_change(&mut lex))
+            }
+            Token::Text => {
+                on_text = true;
+                text.push_str(lex.slice());
+            }
             _ => panic!(),
         }
+    }
+    if !text.is_empty() {
+        changes.push(Change::TaskChange(TaskChange::TaskMessage(text.clone())));
     }
     return changes;
 }
@@ -193,59 +216,24 @@ fn parse_name_change(lex: &mut Lexer<Token>) -> Change {
     return Change::NameChange(text);
 }
 
-fn lex_message(start: &str, lex: &mut Lexer<Token>) -> Change {
-    let mut text = String::from(start);
-    while let Some(token) = lex.next() {
-        match token {
-            Token::Text => text.push_str(lex.slice()),
-            _ => break,
-        }
-    }
-    return Change::TaskChange(TaskChange::TaskMessage(text));
-}
-
-// TODO: Remove
-// default hook can be found here: std::panic::default_hook;
-//
-// an alternative to using set_hook could be to redirect stderr and stdout
-// specifically for each thread using io::set_output_capture
-//
-// thread_local! is interesting as well.
-
-fn multiply_senders<T>(a_sender: SyncSender<T>, amount: u16) -> Vec<SyncSender<T>> {
-    if amount == 0 {
-        return Vec::new();
-    } else if amount == 1 {
-        return vec![a_sender];
-    }
-
-    let mut senders = Vec::new();
-    for _ in 0..=amount - 2 {
-        senders.push(a_sender.clone());
-    }
-    senders.push(a_sender);
-    return senders;
-}
-
 fn run_tasks_in_thread(task_queue: Arc<Mutex<VecDeque<Box<dyn Task>>>>, sink: LocalStream) {
-    thread::spawn(
-        move || {
-            while let Err(_) = spawn_task_thread(task_queue.clone(), sink.clone()).join() {}
-        },
-    );
-}
-
-fn spawn_task_thread(
-    task_queue: Arc<Mutex<VecDeque<Box<dyn Task>>>>,
-    sink: LocalStream,
-) -> JoinHandle<()> {
-    let logger = ThreadLogger::new(sink.clone());
     thread::spawn(move || {
-        set_output_capture(Some(sink.clone()));
+        let logger = ThreadLogger::new(sink.clone());
         while let Some(task) = get_next_task(&task_queue) {
             logger.switch_task(task.name());
-            run_task(task, &logger);
+            if let Err(_) = spawn_task_thread(task, logger.clone()).join() {
+                logger.set_status(Status::Failed(String::from(
+                    "Aborting task since thread panicked",
+                )));
+            }
         }
+    });
+}
+
+fn spawn_task_thread(task: Box<dyn Task>, logger: ThreadLogger) -> JoinHandle<()> {
+    thread::spawn(move || {
+        set_output_capture(Some(logger.sink.clone()));
+        run_task(task, &logger);
     })
 }
 

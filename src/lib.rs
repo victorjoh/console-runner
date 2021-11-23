@@ -1,6 +1,5 @@
 #![feature(internal_output_capture)]
 mod console_runner;
-extern crate lazy_static;
 use console_runner::common::*;
 use console_runner::tasks::{Logger, Task, TaskResult, TaskRunner};
 use console_runner::view::*;
@@ -8,17 +7,17 @@ use std::thread;
 
 use std::time::Duration;
 
-struct Problem {
-    vals: Vec<String>,
+struct Problem<'a> {
+    vals: Vec<&'a str>,
     name: TaskName,
     result: TaskResult,
 }
 
-impl Task for Problem {
-    fn run(&self, logger: &dyn Logger) -> TaskResult {
+impl <'a> Task for Problem<'a> {
+    fn run(&self, _: &dyn Logger) -> TaskResult {
         for val in &self.vals {
-            logger.log(val.to_string());
-            //println!("Hello, World!");
+            //logger.log(val.to_string());
+            println!("{}", val);
             thread::sleep(Duration::from_secs(1));
         }
         return self.result.clone();
@@ -37,7 +36,7 @@ struct PanicProblem {
 impl Task for PanicProblem {
     fn run(&self, logger: &dyn Logger) -> TaskResult {
         for val in &self.vals {
-            logger.log(val.to_string());
+            logger.log(val);
             thread::sleep(Duration::from_secs(1));
         }
         panic!("I don't know what to do!");
@@ -48,7 +47,7 @@ impl Task for PanicProblem {
     }
 }
 
-pub fn run(day: Option<usize>, session: Option<String>) {
+pub fn run(_day: Option<usize>, _session: Option<String>) {
     let p1 = PanicProblem {
         vals: vec![
             String::from("hi"),
@@ -62,109 +61,109 @@ pub fn run(day: Option<usize>, session: Option<String>) {
     };
     let p2 = Problem {
         vals: vec![
-            String::from("more"),
-            String::from("messages"),
-            String::from("for"),
-            String::from("you"),
-            String::from("less"),
-            String::from("speaking"),
-            String::from("with"),
-            String::from("me"),
+            "more",
+            "messages",
+            "for",
+            "you",
+            "less",
+            "speaking",
+            "with",
+            "me",
         ],
         name: String::from("p2"),
         result: Err(String::from("Something went wrong!")),
     };
     let p3 = Problem {
         vals: vec![
-            // String::from("this is a really long line that will have to be line broken, otherwise bad things will happen?"),
-            String::from("messages"),
-            String::from("for"),
-            String::from("you"),
-            String::from("less"),
-            String::from("speaking"),
-            String::from("with"),
-            String::from("me"),
+            // "this is a really long line that will have to be line broken, otherwise bad things will happen?",
+            "messages",
+            "for",
+            "you",
+            "less",
+            "speaking",
+            "with",
+            "me",
         ],
         name: String::from("p3"),
         result: Ok(Some(String::from("5"))),
     };
     let p4 = Problem {
         vals: vec![
-            // String::from("this is a really long line that will have to be line broken, otherwise bad things will happen?"),
-            String::from("messages"),
-            String::from("for"),
-            String::from("you"),
-            String::from("less"),
-            String::from("speaking"),
-            String::from("with"),
-            String::from("me"),
+            // "this is a really long line that will have to be line broken, otherwise bad things will happen?",
+            "messages",
+            "for",
+            "you",
+            "less",
+            "speaking",
+            "with",
+            "me",
         ],
         name: String::from("p4"),
         result: Ok(None),
     };
     let p01 = Problem {
         vals: vec![
-            String::from("messages"),
-            String::from("for"),
-            String::from("you"),
-            String::from("less"),
-            String::from("speaking"),
-            String::from("with"),
-            String::from("me"),
-            String::from("messages"),
-            String::from("for"),
-            String::from("you"),
-            String::from("less"),
-            String::from("speaking"),
-            String::from("with"),
-            String::from("me"),
-            String::from("messages"),
-            String::from("for"),
-            String::from("you"),
-            String::from("less"),
-            String::from("speaking"),
-            String::from("with"),
-            String::from("me"),
+            "messages",
+            "for",
+            "you",
+            "less",
+            "speaking",
+            "with",
+            "me",
+            "messages",
+            "for",
+            "you",
+            "less",
+            "speaking",
+            "with",
+            "me",
+            "messages",
+            "for",
+            "you",
+            "less",
+            "speaking",
+            "with",
+            "me",
         ],
         name: String::from("p01"),
         result: Ok(Some(String::from("5"))),
     };
     let p02 = Problem {
         vals: vec![
-            String::from("messages"),
-            String::from("for"),
-            String::from("you"),
-            String::from("less"),
-            String::from("speaking"),
-            String::from("with"),
-            String::from("me"),
+            "messages",
+            "for",
+            "you",
+            "less",
+            "speaking",
+            "with",
+            "me",
         ],
         name: String::from("p02"),
         result: Ok(Some(String::from("5"))),
     };
     let p03 = Problem {
         vals: vec![
-            String::from("messages"),
+            "messages",
         ],
         name: String::from("p03"),
         result: Ok(Some(String::from("5"))),
     };
     let p04 = Problem {
         vals: vec![
-            String::from("messages"),
+            "messages",
         ],
         name: String::from("p04"),
         result: Ok(Some(String::from("5"))),
     };
     let p05 = Problem {
         vals: vec![
-            String::from("messages"),
-            String::from("for"),
-            String::from("you"),
-            String::from("less"),
-            String::from("speaking"),
-            String::from("with"),
-            String::from("me"),
+            "messages",
+            "for",
+            "you",
+            "less",
+            "speaking",
+            "with",
+            "me",
         ],
         name: String::from("p05"),
         result: Ok(Some(String::from("5"))),
@@ -175,4 +174,23 @@ pub fn run(day: Option<usize>, session: Option<String>) {
         vec![Box::from(p01), Box::from(p1), Box::from(p02), Box::from(p03), Box::from(p04), Box::from(p05), Box::from(p2), Box::from(p3), Box::from(p4)],
         &mut Console::new(),
     );
+}
+
+struct DebugConsole {
+}
+
+impl DebugConsole {
+    pub fn new() -> DebugConsole {
+        DebugConsole {  }
+    }
+}
+
+impl View for DebugConsole {
+    fn initialize(&mut self, _: Vec<TaskName>) {
+
+    }
+
+    fn update(&mut self, task_update: TaskUpdate) {
+        println!("{:?}", task_update);
+    }
 }
