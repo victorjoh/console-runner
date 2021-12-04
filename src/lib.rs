@@ -1,8 +1,10 @@
 #![feature(internal_output_capture)]
-mod console_runner;
-use console_runner::common::*;
-use console_runner::tasks::{Logger, Task, TaskResult, TaskRunner};
-use console_runner::view::*;
+mod common;
+mod tasks;
+mod view;
+use common::*;
+use tasks::{Logger, Task, TaskResult, TaskRunner};
+use view::*;
 use std::thread;
 
 use std::time::Duration;
@@ -47,7 +49,7 @@ impl Task for PanicProblem {
     }
 }
 
-pub fn run(_day: Option<usize>, _session: Option<String>) {
+pub fn run() {
     let p1 = PanicProblem {
         vals: vec![
             String::from("hi"),
