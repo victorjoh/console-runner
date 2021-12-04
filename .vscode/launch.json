@@ -7,16 +7,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'aoc'",
+            "name": "Debug unit tests in library 'console-runner'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=aoc"
+                    "--package=console-runner"
                 ],
                 "filter": {
-                    "name": "aoc",
+                    "name": "console-runner",
                     "kind": "lib"
                 }
             },
@@ -26,15 +26,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'aoc'",
+            "name": "Debug executable 'console-runner'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=aoc",
-                    "--package=aoc"
+                    "--bin=console-runner",
+                    "--package=console-runner"
                 ],
                 "filter": {
-                    "name": "aoc",
+                    "name": "console-runner",
                     "kind": "bin"
                 }
             },
@@ -44,16 +44,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'aoc'",
+            "name": "Debug unit tests in executable 'console-runner'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=aoc",
-                    "--package=aoc"
+                    "--bin=console-runner",
+                    "--package=console-runner"
                 ],
                 "filter": {
-                    "name": "aoc",
+                    "name": "console-runner",
                     "kind": "bin"
                 }
             },
