@@ -56,6 +56,7 @@ const TASK_CHANGE_START_TAG: &str = "{TaskChangeStart ";
 const TASK_CHANGE_END_TAG: &str = " TaskChangeEnd}";
 const NAME_CHANGE_START_TAG: &str = "{NameChangeStart ";
 const NAME_CHANGE_END_TAG: &str = " NameChangeEnd}";
+const CLOSE_SINK_TAG: &str = "{CloseSink}";
 
 impl ThreadLogger {
     fn new(sink: LocalStream) -> ThreadLogger {
@@ -78,6 +79,11 @@ impl ThreadLogger {
         buffer.extend_from_slice(NAME_CHANGE_START_TAG.as_bytes());
         buffer.extend_from_slice(name.as_bytes());
         buffer.extend_from_slice(NAME_CHANGE_END_TAG.as_bytes());
+    }
+
+    fn close_sink(&self) {
+        let mut buffer = self.sink.lock().unwrap();
+        buffer.extend_from_slice(CLOSE_SINK_TAG.as_bytes());
     }
 }
 
@@ -108,28 +114,33 @@ impl TaskRunner {
         for sink in thread_sinks.iter() {
             run_tasks_in_thread(task_queue.clone(), sink.print_buffer.clone());
         }
-        loop {
-            for thread_sink in thread_sinks.iter_mut() {
-                let mut buffer = thread_sink.print_buffer.lock().unwrap();
-                for change in get_task_updates(buffer.as_slice()) {
-                    match change {
-                        Change::TaskChange(task_change) => view.update(TaskUpdate {
-                            task_name: thread_sink.current_task_name.as_ref().unwrap().clone(),
-                            change: task_change,
-                        }),
-                        Change::NameChange(name) => thread_sink.current_task_name = Some(name),
-                    }
-                }
-                buffer.clear();
-            }
+        while !thread_sinks.is_empty() {
+            thread_sinks.retain_mut(|sink| send_changes_to_view(sink, view));
             thread::sleep(Duration::from_millis(100));
         }
     }
 }
 
+fn send_changes_to_view(thread_sink: &mut ThreadSink, view: &mut dyn View) -> bool {
+    let mut buffer = thread_sink.print_buffer.lock().unwrap();
+    for change in get_task_updates(buffer.as_slice()) {
+        match change {
+            Change::TaskChange(task_change) => view.update(TaskUpdate {
+                task_name: thread_sink.current_task_name.as_ref().unwrap().clone(),
+                change: task_change,
+            }),
+            Change::NameChange(name) => thread_sink.current_task_name = Some(name),
+            Change::CloseSink => return false
+        }
+    }
+    buffer.clear();
+    true
+}
+
 enum Change {
     TaskChange(TaskChange),
     NameChange(TaskName),
+    CloseSink,
 }
 
 #[derive(Logos, Debug, PartialEq)]
@@ -146,6 +157,9 @@ enum Token {
     #[token(" NameChangeEnd}")]
     NameChangeEnd,
 
+    #[token("{CloseSink}")]
+    CloseSink,
+
     // A character that is not whitespace or is whitespace. Meaning this will
     // match any single character including newline.
     #[regex("[\\S\\s]")]
@@ -157,7 +171,7 @@ enum Token {
 
 fn get_task_updates(buffer: &[u8]) -> Vec<Change> {
     let mut lex = Token::lexer(from_utf8(buffer).unwrap());
-    let mut changes = Vec::new();
+    let mut changes: Vec<Change> = Vec::new();
 
     let mut text = String::new();
     let mut on_text = false;
@@ -182,6 +196,14 @@ fn get_task_updates(buffer: &[u8]) -> Vec<Change> {
             Token::Text => {
                 on_text = true;
                 text.push_str(lex.slice());
+            }
+            Token::CloseSink => {
+                if on_text {
+                    changes.push(Change::TaskChange(TaskChange::TaskMessage(text.clone())));
+                    text.clear();
+                    on_text = false;
+                }
+                changes.push(Change::CloseSink);
             }
             _ => panic!(),
         }
@@ -227,6 +249,7 @@ fn run_tasks_in_thread(task_queue: Arc<Mutex<VecDeque<Box<dyn Task>>>>, sink: Lo
                 )));
             }
         }
+        logger.close_sink();
     });
 }
 
