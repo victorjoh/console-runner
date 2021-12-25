@@ -30,6 +30,7 @@ pub trait Logger {
 
 pub struct TaskRunner {
     pub thread_count: u16,
+    pub view_update_period: u64,
 }
 
 struct ThreadLogger {
@@ -115,8 +116,8 @@ impl TaskRunner {
             run_tasks_in_thread(task_queue.clone(), sink.print_buffer.clone());
         }
         while !thread_sinks.is_empty() {
+            thread::sleep(Duration::from_millis(self.view_update_period));
             thread_sinks.retain_mut(|sink| send_changes_to_view(sink, view));
-            thread::sleep(Duration::from_millis(100));
         }
     }
 }

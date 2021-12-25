@@ -2,7 +2,10 @@ use console_runner::{common::*, tasks::*};
 
 #[test]
 pub fn the_result_of_a_task_is_passed_to_the_view() {
-    let problem_runner = TaskRunner { thread_count: 1 };
+    let problem_runner = TaskRunner {
+        thread_count: 1,
+        view_update_period: 0,
+    };
     let mut view = StoreToMemory::new();
 
     problem_runner.run(vec![Box::from(SimpleTask {})], &mut view);
@@ -10,16 +13,17 @@ pub fn the_result_of_a_task_is_passed_to_the_view() {
     assert_eq!(
         view.task_updates,
         vec![
-            TaskUpdate {
-                task_name: String::from("SimpleTask"),
-                change: TaskChange::TaskStatus(Status::Running),
-            },
-            TaskUpdate {
-                task_name: String::from("SimpleTask"),
-                change: TaskChange::TaskStatus(Status::Finished(Some(String::from("5")))),
-            }
+            new_status("SimpleTask", Status::Running),
+            new_status("SimpleTask", Status::Finished(Some(String::from("5")))),
         ]
     );
+}
+
+fn new_status(name: &str, status: Status) -> TaskUpdate {
+    TaskUpdate {
+        task_name: String::from(name),
+        change: TaskChange::TaskStatus(status),
+    }
 }
 
 struct SimpleTask {}
