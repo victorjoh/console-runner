@@ -1,7 +1,8 @@
 #![feature(internal_output_capture)]
-mod common;
-mod tasks;
-mod view;
+#![feature(vec_retain_mut)]
+pub mod common;
+pub mod tasks;
+pub mod view;
 use common::*;
 use tasks::{Logger, Task, TaskResult, TaskRunner};
 use view::*;
