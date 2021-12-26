@@ -131,7 +131,7 @@ fn send_changes_to_view(thread_sink: &mut ThreadSink, view: &mut dyn View) -> bo
                 change: task_change,
             }),
             Change::NameChange(name) => thread_sink.current_task_name = Some(name),
-            Change::CloseSink => return false
+            Change::CloseSink => return false,
         }
     }
     buffer.clear();
@@ -186,26 +186,12 @@ fn get_task_updates(buffer: &[u8]) -> Vec<Change> {
                 }
                 changes.push(parse_task_change(&mut lex));
             }
-            Token::NameChangeStart => {
-                if on_text {
-                    changes.push(Change::TaskChange(TaskChange::TaskMessage(text.clone())));
-                    text.clear();
-                    on_text = false;
-                }
-                changes.push(parse_name_change(&mut lex))
-            }
+            Token::NameChangeStart => changes.push(parse_name_change(&mut lex)),
             Token::Text => {
                 on_text = true;
                 text.push_str(lex.slice());
             }
-            Token::CloseSink => {
-                if on_text {
-                    changes.push(Change::TaskChange(TaskChange::TaskMessage(text.clone())));
-                    text.clear();
-                    on_text = false;
-                }
-                changes.push(Change::CloseSink);
-            }
+            Token::CloseSink => changes.push(Change::CloseSink),
             _ => panic!(),
         }
     }
