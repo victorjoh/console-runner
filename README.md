@@ -1,5 +1,7 @@
 # Console Runner
 
+![Example usage gif](example.gif "Example usage gif")
+
 Console Runner to do:
 1. README
 2. Tests

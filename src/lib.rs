@@ -1,5 +1,4 @@
 #![feature(internal_output_capture)]
-#![feature(vec_retain_mut)]
 pub mod common;
 pub mod tasks;
 pub mod view;
@@ -7,6 +6,7 @@ use common::*;
 use std::thread;
 use tasks::{Logger, Task, TaskResult, TaskRunner};
 use view::*;
+use rand::Rng;
 
 use std::time::Duration;
 
@@ -21,7 +21,7 @@ impl<'a> Task for Problem<'a> {
         for val in &self.vals {
             //logger.log(val.to_string());
             println!("{}", val);
-            thread::sleep(Duration::from_secs(1));
+            thread::sleep(Duration::from_millis(rand::thread_rng().gen_range(500..1500)));
         }
         return self.result.clone();
     }
@@ -40,7 +40,7 @@ impl Task for PanicProblem {
     fn run(&self, logger: &dyn Logger) -> TaskResult {
         for val in &self.vals {
             logger.log(val);
-            thread::sleep(Duration::from_secs(1));
+            thread::sleep(Duration::from_millis(rand::thread_rng().gen_range(500..1500)));
         }
         panic!("I don't know what to do!");
     }
@@ -60,13 +60,13 @@ pub fn run() {
             String::from("goodbye"),
             String::from("to"),
         ],
-        name: String::from("p1"),
+        name: String::from("panic"),
     };
     let p2 = Problem {
         vals: vec![
             "more", "messages", "for", "you", "less", "speaking", "with", "me",
         ],
-        name: String::from("p2"),
+        name: String::from("doing stuff"),
         result: Err(String::from("Something went wrong!")),
     };
     let p3 = Problem {
@@ -74,15 +74,15 @@ pub fn run() {
             // "this is a really long line that will have to be line broken, otherwise bad things will happen?",
             "messages", "for", "you", "less", "speaking", "with", "me",
         ],
-        name: String::from("p3"),
-        result: Ok(Some(String::from("5"))),
+        name: String::from("hello?"),
+        result: Ok(Some(String::from("42"))),
     };
     let p4 = Problem {
         vals: vec![
             // "this is a really long line that will have to be line broken, otherwise bad things will happen?",
             "messages", "for", "you", "less", "speaking", "with", "me",
         ],
-        name: String::from("p4"),
+        name: String::from("convert format"),
         result: Ok(None),
     };
     let p01 = Problem {
@@ -91,28 +91,28 @@ pub fn run() {
             "less", "speaking", "with", "me", "messages", "for", "you", "less", "speaking", "with",
             "me",
         ],
-        name: String::from("p01"),
-        result: Ok(Some(String::from("5"))),
+        name: String::from("Copy file install.iso"),
+        result: Ok(Some(String::from("File copied"))),
     };
     let p02 = Problem {
         vals: vec!["messages", "for", "you", "less", "speaking", "with", "me"],
-        name: String::from("p02"),
-        result: Ok(Some(String::from("5"))),
+        name: String::from("download happy-cow.pdf"),
+        result: Ok(Some(String::from("Download complete"))),
     };
     let p03 = Problem {
         vals: vec!["messages"],
-        name: String::from("p03"),
-        result: Ok(Some(String::from("5"))),
+        name: String::from("quick"),
+        result: Ok(Some(String::from("Yes, cookies are tasty."))),
     };
     let p04 = Problem {
         vals: vec!["messages"],
-        name: String::from("p04"),
-        result: Ok(Some(String::from("5"))),
+        name: String::from("get distance"),
+        result: Ok(Some(String::from("532 m"))),
     };
     let p05 = Problem {
         vals: vec!["messages", "for", "you", "less", "speaking", "with", "me"],
-        name: String::from("p05"),
-        result: Ok(Some(String::from("5"))),
+        name: String::from("import video"),
+        result: Ok(Some(String::from("Import successful."))),
     };
 
     let problem_runner = TaskRunner {
@@ -135,18 +135,18 @@ pub fn run() {
     );
 }
 
-struct DebugConsole {}
+// struct DebugConsole {}
 
-impl DebugConsole {
-    pub fn new() -> DebugConsole {
-        DebugConsole {}
-    }
-}
+// impl DebugConsole {
+//     pub fn new() -> DebugConsole {
+//         DebugConsole {}
+//     }
+// }
 
-impl View for DebugConsole {
-    fn initialize(&mut self, _: Vec<TaskName>) {}
+// impl View for DebugConsole {
+//     fn initialize(&mut self, _: Vec<TaskName>) {}
 
-    fn update(&mut self, task_update: TaskUpdate) {
-        println!("{:?}", task_update);
-    }
-}
+//     fn update(&mut self, task_update: TaskUpdate) {
+//         println!("{:?}", task_update);
+//     }
+// }
